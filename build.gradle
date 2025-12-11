@@ -1,0 +1,123 @@
+// Add buildscript dependencies for Flyway plugin (must come before plugins block)
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath 'com.mysql:mysql-connector-j:8.3.0'
+		classpath 'org.flywaydb:flyway-mysql:10.15.0'
+	}
+}
+
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.5'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.flywaydb.flyway' version '10.15.0'
+}
+
+group = 'com.krd'
+version = '0.0.1-SNAPSHOT'
+
+ext {
+	set('springAiVersion', "1.0.3")
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenLocal()  // For locally published KRD starters
+	mavenCentral()
+}
+
+dependencies {
+	// Spring Boot Starters
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// KRD Exception Handling Starter - Standardized error responses
+	implementation 'com.krd:exception-handling-starter:1.0.0'
+
+	// Spring AI - OpenAI Integration
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+
+	// Database
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-mysql'
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// MapStruct (for DTO mapping)
+	implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+	annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+
+	// API Documentation
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+
+	// Environment Variables
+	implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+
+	// Testing
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'com.h2database:h2'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+// Helper function to read variables from .env file
+def getEnvVar(String key, String defaultValue = '') {
+	def envFile = file('.env')
+	if (!envFile.exists()) {
+		return defaultValue
+	}
+
+	def value = envFile.readLines()
+			.findAll { line -> !line.startsWith('#') && line.contains('=') }
+			.collectEntries { line ->
+				def parts = line.split('=', 2)
+				[(parts[0].trim()): parts[1].trim()]
+			}
+			.get(key)
+
+	return value ?: defaultValue
+}
+
+// Flyway configuration for running migrations from command line
+// Reads DB_USERNAME and DB_PASSWORD from .env file
+flyway {
+	url = "jdbc:mysql://localhost:3306/chat_assistant_db?createDatabaseIfNotExist=true"
+	user = getEnvVar('DB_USERNAME', '')
+	password = getEnvVar('DB_PASSWORD', '')
+	locations = ['classpath:db/migration']
+	cleanDisabled = false
+
+	// Available Flyway tasks:
+	// - ./gradlew flywayMigrate  : Run pending migrations
+	// - ./gradlew flywayInfo     : Show migration status
+	// - ./gradlew flywayValidate : Validate applied migrations
+	// - ./gradlew flywayClean    : Drop all database objects (DANGER!)
+	// - ./gradlew flywayRepair   : Repair metadata table
+}
