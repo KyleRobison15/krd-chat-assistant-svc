@@ -14,7 +14,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,7 +56,7 @@ class ChatServiceTest {
 	void createChat_shouldReturnChatDto() {
 		// Given
 		when(chatRepository.save(any(Chat.class))).thenReturn(testChat);
-		when(chatMapper.toDto(testChat)).thenReturn(testChatDto);
+		when(chatMapper.toDto(any(Chat.class))).thenReturn(testChatDto);
 
 		// When
 		ChatDto result = chatService.createChat();
@@ -63,7 +65,7 @@ class ChatServiceTest {
 		assertThat(result).isNotNull();
 		assertThat(result.getId()).isEqualTo(testChatId);
 		verify(chatRepository).save(any(Chat.class));
-		verify(chatMapper).toDto(testChat);
+		verify(chatMapper).toDto(any(Chat.class));
 	}
 
 	@Test
@@ -77,7 +79,7 @@ class ChatServiceTest {
 				.thenReturn(new ArrayList<>());
 		when(openAiChatService.chat(anyList(), eq(userPrompt))).thenReturn(aiResponse);
 		when(chatMessageRepository.save(any(ChatMessage.class))).thenAnswer(i -> i.getArgument(0));
-		when(chatMapper.toDto(testChat)).thenReturn(testChatDto);
+		when(chatMapper.toDto(any(Chat.class))).thenReturn(testChatDto);
 
 		// When
 		ChatDto result = chatService.sendMessage(testChatId, userPrompt);

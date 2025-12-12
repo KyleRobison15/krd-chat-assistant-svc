@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -16,6 +17,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -26,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(TestConfig.class)
+@WithMockUser
 class ChatControllerIntegrationTest {
 
 	@Autowired
@@ -36,7 +39,7 @@ class ChatControllerIntegrationTest {
 
 	@Test
 	void createChat_shouldReturn201WithChatDto() throws Exception {
-		mockMvc.perform(post("/chats"))
+		mockMvc.perform(post("/chats").with(csrf()))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.id").isNotEmpty())
 				.andExpect(header().exists("Location"));
@@ -49,7 +52,7 @@ class ChatControllerIntegrationTest {
 				.thenReturn("This is an AI response");
 
 		// First create a chat
-		String createResponse = mockMvc.perform(post("/chats"))
+		String createResponse = mockMvc.perform(post("/chats").with(csrf()))
 				.andReturn()
 				.getResponse()
 				.getContentAsString();
@@ -62,7 +65,8 @@ class ChatControllerIntegrationTest {
 
 		mockMvc.perform(post("/chats/" + chatId + "/messages")
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(requestBody))
+						.content(requestBody)
+						.with(csrf()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(chatId))
 				.andExpect(jsonPath("$.messages").isArray())
@@ -77,7 +81,8 @@ class ChatControllerIntegrationTest {
 
 		mockMvc.perform(post("/chats/" + chatId + "/messages")
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(requestBody))
+						.content(requestBody)
+						.with(csrf()))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.status").value(400))
 				.andExpect(jsonPath("$.message").isNotEmpty());
@@ -90,7 +95,8 @@ class ChatControllerIntegrationTest {
 
 		mockMvc.perform(post("/chats/" + invalidId + "/messages")
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(requestBody))
+						.content(requestBody)
+						.with(csrf()))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.status").value(404))
 				.andExpect(jsonPath("$.message").value("Chat not found with id: " + invalidId));
